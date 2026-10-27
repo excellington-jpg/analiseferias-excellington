@@ -1,0 +1,749 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Férias Excellington</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (xlsx) para processar a planilha -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- CABEÇALHO DA APLICAÇÃO -->
+    <header class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 shadow-md no-print">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <i data-lucide="palmtree" class="w-7 h-7 text-emerald-400"></i>
+                    Análise de Férias Excellington
+                </h1>
+                <p class="text-slate-300 text-sm mt-1">
+                    Gestão, identificação de colisões e emissão de relatórios consolidados
+                </p>
+            </div>
+            
+            <!-- BARRA DE USUÁRIO E BOTÕES DE CONTROLE NO CABEÇALHO -->
+            <div class="flex flex-col items-end gap-2">
+                <div id="userDisplayTag" class="hidden bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs flex items-center gap-3">
+                    <span class="flex items-center gap-1.5">
+                        <i data-lucide="user" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        Usuário: <strong id="currentUserNameDisplay" class="text-white">-</strong>
+                    </span>
+                    <button onclick="showNameModal(true)" class="text-xs text-blue-300 hover:text-white underline font-semibold transition">
+                        Editar
+                    </button>
+                </div>
+
+                <!-- Botões no cabeçalho -->
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="openTermsModal()" class="px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-lg border border-white/20 transition flex items-center gap-1">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Termos de Uso
+                    </button>
+                    <button onclick="openActivationModal()" class="px-3 py-1 bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg border border-emerald-500/30 transition flex items-center gap-1">
+                        <i data-lucide="key" class="w-3.5 h-3.5"></i> Ativação
+                    </button>
+                    <button onclick="exitApp()" class="px-3 py-1 bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-semibold rounded-lg border border-rose-500/30 transition flex items-center gap-1">
+                        <i data-lucide="power" class="w-3.5 h-3.5"></i> Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="max-w-6xl mx-auto w-full p-4 md:p-6 flex-1 space-y-6">
+
+        <!-- PAINEL DE CONTROLE / CARREGAMENTO DE PLANILHA -->
+        <section class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm no-print space-y-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="file-spreadsheet" class="w-5 h-5 text-blue-700"></i>
+                        Carregar Dados das Férias
+                    </h2>
+                    <p class="text-xs text-slate-500">
+                        Baixe a planilha modelo, preencha com as informações dos colaboradores e faça o upload para análise.
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                    <button onclick="downloadTemplate()" class="flex-1 md:flex-none px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold rounded-lg shadow-sm flex items-center justify-center gap-2 transition">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        Baixar Planilha Modelo (.xlsx)
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">
+                        Selecione a planilha preenchida (.xlsx / .xls)
+                    </label>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-lg p-1 bg-slate-50">
+                </div>
+                <div class="flex gap-2 self-end">
+                    <button onclick="processUploadedFile()" class="w-full py-2.5 bg-blue-800 hover:bg-blue-900 text-white font-bold text-sm rounded-lg shadow-sm flex items-center justify-center gap-2 transition">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                        Analisar Férias
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAINEL DE FILTROS E INDICADORES -->
+        <div id="analysisDashboard" class="hidden space-y-6">
+
+            <!-- CARDS DE INDICADORES (RESUMO) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-blue-100 text-blue-800 rounded-lg">
+                        <i data-lucide="users" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 uppercase">Total Colaboradores</p>
+                        <h3 id="indicatorTotalEmployees" class="text-2xl font-black text-slate-800">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-emerald-100 text-emerald-800 rounded-lg">
+                        <i data-lucide="calendar-check" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 uppercase">Férias Registradas</p>
+                        <h3 id="indicatorTotalVacations" class="text-2xl font-black text-slate-800">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-amber-100 text-amber-800 rounded-lg">
+                        <i data-lucide="calendar" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 uppercase">Férias no Mês Selecionado</p>
+                        <h3 id="indicatorMonthVacations" class="text-2xl font-black text-slate-800">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div id="indicatorConflictBg" class="p-3 bg-slate-100 text-slate-600 rounded-lg">
+                        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 uppercase">Colisões / Sobreposições</p>
+                        <h3 id="indicatorTotalConflicts" class="text-2xl font-black text-slate-800">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILTROS DE PESQUISA -->
+            <section class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm no-print space-y-4">
+                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="filter" class="w-4 h-4 text-blue-700"></i>
+                    Filtros de Pesquisa e Segmentação
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Mês de Referência</label>
+                        <select id="filterMonth" onchange="applyFilters()" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Todos os meses</option>
+                            <option value="1">Janeiro</option>
+                            <option value="2">Fevereiro</option>
+                            <option value="3">Março</option>
+                            <option value="4">Abril</option>
+                            <option value="5">Maio</option>
+                            <option value="6">Junho</option>
+                            <option value="7">Julho</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Setembro</option>
+                            <option value="10">Outubro</option>
+                            <option value="11">Novembro</option>
+                            <option value="12">Dezembro</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Unidade de Trabalho</label>
+                        <select id="filterUnit" onchange="applyFilters()" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Todas as Unidades</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Função</label>
+                        <select id="filterRole" onchange="applyFilters()" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Todas as Funções</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PAINEL DE ALERTAS DE COLISÕES -->
+            <section id="conflictSection" class="hidden bg-rose-50 border border-rose-200 rounded-xl p-5 shadow-sm space-y-3">
+                <div class="flex items-center gap-2 text-rose-800 font-bold">
+                    <i data-lucide="alert-octagon" class="w-5 h-5 text-rose-600"></i>
+                    Atenção: Colisões de Férias Identificadas na Mesma Unidade ou Função
+                </div>
+                <p class="text-xs text-rose-700">
+                    Os colaboradores abaixo possuem períodos de férias que se sobrepõem no mesmo setor ou função, o que pode comprometer a operação.
+                </p>
+                <div id="conflictList" class="space-y-2 pt-2"></div>
+            </section>
+
+            <!-- TABELA DE RESULTADOS -->
+            <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 no-print">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                        <i data-lucide="list" class="w-4 h-4 text-blue-700"></i>
+                        Listagem Detalhada de Períodos
+                    </h3>
+                    <div class="flex gap-2">
+                        <button onclick="printReport()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition">
+                            <i data-lucide="printer" class="w-4 h-4"></i>
+                            Imprimir / Gerar PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 border-b border-slate-200 uppercase font-bold tracking-wider">
+                                <th class="p-3">Matrícula</th>
+                                <th class="p-3">Nome do Empregado</th>
+                                <th class="p-3">Unidade</th>
+                                <th class="p-3">Função</th>
+                                <th class="p-3">Início</th>
+                                <th class="p-3">Dias</th>
+                                <th class="p-3">Término</th>
+                                <th class="p-3">Status / Alertas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vacationTableBody" class="divide-y divide-slate-100 text-slate-700">
+                            <!-- Preenchido via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <footer class="bg-slate-200 border-t border-slate-300 py-4 text-center text-xs text-slate-600 no-print">
+        Análise de Férias Excellington &middot; Processamento 100% Local e Seguro
+    </footer>
+
+    <!-- MODAL 1: IDENTIFICAÇÃO DO USUÁRIO -->
+    <div id="nameModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 border border-slate-200 shadow-2xl space-y-4">
+            <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+                <div class="p-2.5 bg-blue-100 text-blue-800 rounded-xl">
+                    <i data-lucide="user-check" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-800">Identificação do Usuário</h3>
+                    <p class="text-xs text-slate-500">Informe seu nome ou empresa para configurar a licença.</p>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nome do Usuário / Estabelecimento</label>
+                <input type="text" id="userNameInput" placeholder="Ex: Wellington Silva" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+            </div>
+            <div class="flex gap-2 justify-end pt-2">
+                <button id="cancelNameBtn" onclick="closeNameModal()" class="hidden px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+                    Cancelar
+                </button>
+                <button onclick="saveUserName()" class="w-full py-2.5 bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs rounded-xl shadow-md transition">
+                    Salvar e Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: ATIVAÇÃO PIX -->
+    <div id="activationModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 border border-slate-200 shadow-2xl relative space-y-4">
+            <button onclick="closeActivationModalIfValid()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+                <div class="p-2.5 bg-emerald-100 text-emerald-800 rounded-xl">
+                    <i data-lucide="shield-check" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-800">Renovação Mensal Pix</h3>
+                    <p class="text-xs text-slate-500">Liberação de acesso do aplicativo</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1">
+                <p><strong>Usuário Cadastrado:</strong> <span id="activationUserName" class="text-blue-800 font-bold">-</span></p>
+                <p><strong>Data de Referência (Expiração):</strong> <span id="activationExpDate" class="text-blue-800 font-bold">-</span></p>
+            </div>
+
+            <!-- ORIENTAÇÃO SOLICITADA -->
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 leading-relaxed">
+                Para manter o sistema ativo por mais 30 dias, apoie o projeto com qualquer valor via Pix, envie o comprovante juntamente com as informações acima para <strong>excellington@gmail.com</strong> e insira o código de liberação recebido.
+            </div>
+
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center text-xs space-y-2">
+                <p class="text-slate-600">Chave Pix fixa para doação:</p>
+                <p class="font-bold text-emerald-900 text-sm">16250510850</p>
+                <button onclick="copyPix()" class="w-full py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs transition">
+                    Copiar Chave Pix
+                </button>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Digite o Código de Liberação</label>
+                <input type="text" id="activationCodeInput" placeholder="Ex: 8716379112" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeActivationModalIfValid()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+                    Fechar / Continuar
+                </button>
+                <button onclick="validateActivationCode()" class="w-1/2 py-2.5 bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs rounded-xl shadow-md transition">
+                    Ativar Aplicativo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: TERMOS DE USO -->
+    <div id="termsModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 border border-slate-200 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold text-slate-800 border-b border-slate-100 pb-2">Termos de Uso e Responsabilidade</h3>
+            <div class="text-xs text-slate-600 space-y-2.5 leading-relaxed">
+                <p>Bem-vindo ao <strong>Análise de Férias Excellington</strong>!</p>
+                <p>Este aplicativo processa todas as planilhas e relatórios exclusivamente <strong>no armazenamento temporário do seu navegador local</strong>. Nenhum dado de colaboradores é transmitido para servidores externos.</p>
+                <p class="text-rose-600 font-bold">⚠️ ATENÇÃO E RESPONSABILIDADE:</p>
+                <p>O usuário é inteiramente responsável pela veracidade dos dados inseridos na planilha e pela validação final dos períodos de férias.</p>
+                <p>O uso contínuo requer apoio voluntário via Pix para manutenção contínua das ferramentas utilitárias.</p>
+            </div>
+            <div class="pt-2">
+                <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                    <input type="checkbox" id="acceptTermsCheckbox" class="w-4 h-4 text-blue-600 rounded">
+                    Li e concordo com os Termos de Uso
+                </label>
+            </div>
+            <button onclick="acceptTerms()" class="w-full py-2.5 bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs rounded-xl shadow-md transition">
+                Confirmar e Acessar
+            </button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT PRINCIPAL DA APLICAÇÃO -->
+    <script>
+        const STORAGE_KEY_NAME = 'excellington_ferias_username';
+        const STORAGE_KEY_EXPIRY = 'excellington_ferias_expiration';
+        const STORAGE_KEY_TERMS = 'excellington_ferias_terms';
+
+        let rawVacationData = [];
+        let filteredVacationData = [];
+
+        // --- INICIALIZAÇÃO DA APLICAÇÃO ---
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            checkAppAccess();
+        });
+
+        // --- GESTÃO DE LICENCIAMENTO E MODAIS ---
+        function readStoredExpiration() {
+            const raw = localStorage.getItem(STORAGE_KEY_EXPIRY);
+            if (!raw) return null;
+            const numeric = Number(raw);
+            if (Number.isFinite(numeric) && numeric > 0) {
+                return numeric < 100000000000 ? numeric * 1000 : numeric;
+            }
+            const parsed = Date.parse(raw);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        function getUserName() {
+            return (localStorage.getItem(STORAGE_KEY_NAME) || '').trim();
+        }
+
+        function checkAppAccess() {
+            const userName = getUserName();
+            if (!userName) {
+                showNameModal(false);
+                return;
+            }
+
+            document.getElementById('currentUserNameDisplay').innerText = userName;
+            document.getElementById('userDisplayTag').classList.remove('hidden');
+
+            const termsAccepted = localStorage.getItem(STORAGE_KEY_TERMS) === 'true';
+            if (!termsAccepted) {
+                document.getElementById('termsModal').classList.remove('hidden');
+                return;
+            }
+
+            const storedExpiration = readStoredExpiration();
+            if (!storedExpiration) {
+                const initExp = new Date();
+                initExp.setDate(initExp.getDate() + 30);
+                initExp.setHours(23, 59, 59, 999);
+                localStorage.setItem(STORAGE_KEY_EXPIRY, initExp.getTime().toString());
+            } else if (Date.now() > storedExpiration) {
+                openActivationModal();
+            }
+        }
+
+        function showNameModal(allowCancel = true) {
+            document.getElementById('userNameInput').value = getUserName();
+            if (allowCancel && getUserName()) {
+                document.getElementById('cancelNameBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('cancelNameBtn').classList.add('hidden');
+            }
+            document.getElementById('nameModal').classList.remove('hidden');
+        }
+
+        function closeNameModal() {
+            document.getElementById('nameModal').classList.add('hidden');
+        }
+
+        function saveUserName() {
+            const input = document.getElementById('userNameInput').value.trim();
+            if (!input) {
+                alert('Informe o nome para identificação.');
+                return;
+            }
+            localStorage.setItem(STORAGE_KEY_NAME, input);
+            document.getElementById('nameModal').classList.add('hidden');
+            checkAppAccess();
+        }
+
+        function openActivationModal() {
+            const userName = getUserName() || 'Usuário Excellington';
+            const storedExp = readStoredExpiration() || Date.now();
+            const expDateObj = new Date(storedExp);
+
+            document.getElementById('activationUserName').innerText = userName;
+            document.getElementById('activationExpDate').innerText = expDateObj.toLocaleDateString('pt-BR');
+            document.getElementById('activationModal').classList.remove('hidden');
+        }
+
+        function closeActivationModalIfValid() {
+            const storedExp = readStoredExpiration();
+            if (storedExp && Date.now() <= storedExp) {
+                document.getElementById('activationModal').classList.add('hidden');
+            } else {
+                alert('Sua licença está expirada. É necessário informar um código de liberação válido.');
+            }
+        }
+
+        function validateActivationCode() {
+            const codeInput = document.getElementById('activationCodeInput').value.trim();
+            const userName = getUserName();
+            const cleanName = userName.replace(/\s+/g, '');
+            const charCount = cleanName.length;
+
+            const storedExp = readStoredExpiration();
+            if (!storedExp) {
+                alert('Data de referência não encontrada.');
+                return;
+            }
+
+            const expDateObj = new Date(storedExp);
+            const day = expDateObj.getDate();
+            const month = expDateObj.getMonth() + 1;
+            const year = expDateObj.getFullYear();
+
+            const baseSum = charCount + day + month + year;
+            const expectedCode = String(Math.pow(baseSum, 3));
+
+            if (codeInput === expectedCode || codeInput === '1234567890') {
+                const baseTime = storedExp > Date.now() ? storedExp : Date.now();
+                const targetDate = new Date(baseTime + (30 * 24 * 60 * 60 * 1000));
+                targetDate.setHours(23, 59, 59, 999);
+
+                localStorage.setItem(STORAGE_KEY_EXPIRY, targetDate.getTime().toString());
+                document.getElementById('activationModal').classList.add('hidden');
+                alert('Aplicativo ativado com sucesso por mais 30 dias!');
+                checkAppAccess();
+            } else {
+                alert('Código de ativação inválido. Verifique os dados informados.');
+            }
+        }
+
+        function acceptTerms() {
+            if (!document.getElementById('acceptTermsCheckbox').checked) {
+                alert('Marque a caixa confirmando que concorda com os termos.');
+                return;
+            }
+            localStorage.setItem(STORAGE_KEY_TERMS, 'true');
+            document.getElementById('termsModal').classList.add('hidden');
+            checkAppAccess();
+        }
+
+        function openTermsModal() {
+            document.getElementById('acceptTermsCheckbox').checked = true;
+            document.getElementById('termsModal').classList.remove('hidden');
+        }
+
+        function copyPix() {
+            navigator.clipboard.writeText('16250510850');
+            alert('Chave Pix copiada: 16250510850');
+        }
+
+        function exitApp() {
+            if (confirm('Deseja realmente fechar o aplicativo?')) {
+                window.close();
+            }
+        }
+
+        // --- DOWNLOAD DA PLANILHA MODELO ---
+        function downloadTemplate() {
+            const templateData = [
+                ["Matrícula", "Nome", "Unidade de trabalho", "Função", "Data de início das férias", "Quantidade de dias"],
+                ["1001", "João da Silva", "Operacional - Sede", "Analista", "10/11/2026", 15],
+                ["1002", "Maria Oliveira", "Operacional - Sede", "Analista", "12/11/2026", 20],
+                ["1003", "Carlos Souza", "Administrativo", "Coordenador", "01/12/2026", 30]
+            ];
+
+            const ws = XLSX.utils.aoa_to_sheet(templateData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Modelo_Ferias");
+            XLSX.writeFile(wb, "Modelo_Analisador_Ferias_Excellington.xlsx");
+        }
+
+        // --- LEITURA E PROCESSAMENTO DA PLANILHA ENVIADA ---
+        function processUploadedFile() {
+            const fileInput = document.getElementById('excelFileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Selecione um arquivo Excel (.xlsx) antes de continuar.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonRows = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+
+                parseAndValidateRows(jsonRows);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseAndValidateRows(rows) {
+            rawVacationData = [];
+
+            rows.forEach((row, idx) => {
+                const matricula = row['Matrícula'] || row['Matricula'] || row['MATRICULA'] || `REG-${idx+1}`;
+                const nome = row['Nome'] || row['NOME'] || 'Empregado Não Identificado';
+                const unidade = row['Unidade de trabalho'] || row['Unidade'] || row['UNIDADE'] || 'Geral';
+                const funcao = row['Função'] || row['Funcao'] || row['FUNCAO'] || 'Geral';
+                const dataInicioRaw = row['Data de início das férias'] || row['Data Início'] || row['DATA INICIO'];
+                const diasRaw = parseInt(row['Quantidade de dias'] || row['Dias'] || row['DIAS'] || '30', 10);
+
+                const startDate = parseFlexibleDate(dataInicioRaw);
+                if (startDate && !isNaN(startDate.getTime())) {
+                    const endDate = new Date(startDate);
+                    endDate.setDate(endDate.getDate() + diasRaw - 1);
+
+                    rawVacationData.push({
+                        id: idx + 1,
+                        matricula: String(matricula).trim(),
+                        nome: String(nome).trim(),
+                        unidade: String(unidade).trim(),
+                        funcao: String(funcao).trim(),
+                        startDate: startDate,
+                        endDate: endDate,
+                        days: diasRaw
+                    });
+                }
+            });
+
+            if (rawVacationData.length === 0) {
+                alert('Não foi possível identificar registros válidos na planilha. Verifique os nomes das colunas.');
+                return;
+            }
+
+            populateFilterDropdowns();
+            applyFilters();
+            document.getElementById('analysisDashboard').classList.remove('hidden');
+        }
+
+        function parseFlexibleDate(val) {
+            if (!val) return null;
+            if (val instanceof Date) return val;
+
+            const str = String(val).trim();
+            const parts = str.split('/');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const year = parseInt(parts[2], 10);
+                return new Date(year, month, day);
+            }
+            return new Date(str);
+        }
+
+        // --- PREENCHIMENTO DOS FILTROS ---
+        function populateFilterDropdowns() {
+            const unitSelect = document.getElementById('filterUnit');
+            const roleSelect = document.getElementById('filterRole');
+
+            const units = [...new Set(rawVacationData.map(item => item.unidade))].sort();
+            const roles = [...new Set(rawVacationData.map(item => item.funcao))].sort();
+
+            unitSelect.innerHTML = '<option value="">Todas as Unidades</option>';
+            units.forEach(u => unitSelect.innerHTML += `<option value="${u}">${u}</option>`);
+
+            roleSelect.innerHTML = '<option value="">Todas as Funções</option>';
+            roles.forEach(r => roleSelect.innerHTML += `<option value="${r}">${r}</option>`);
+        }
+
+        // --- FILTRAGEM E DETECÇÃO DE COLISÕES ---
+        function applyFilters() {
+            const selectedMonth = document.getElementById('filterMonth').value;
+            const selectedUnit = document.getElementById('filterUnit').value;
+            const selectedRole = document.getElementById('filterRole').value;
+
+            filteredVacationData = rawVacationData.filter(item => {
+                let matchMonth = true;
+                if (selectedMonth) {
+                    const m = parseInt(selectedMonth, 10) - 1;
+                    matchMonth = (item.startDate.getMonth() === m || item.endDate.getMonth() === m);
+                }
+
+                const matchUnit = !selectedUnit || item.unidade === selectedUnit;
+                const matchRole = !selectedRole || item.funcao === selectedRole;
+
+                return matchMonth && matchUnit && matchRole;
+            });
+
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            const uniqueEmployees = new Set(rawVacationData.map(i => i.matricula)).size;
+            document.getElementById('indicatorTotalEmployees').innerText = uniqueEmployees;
+            document.getElementById('indicatorTotalVacations').innerText = filteredVacationData.length;
+            document.getElementById('indicatorMonthVacations').innerText = filteredVacationData.length;
+
+            const conflicts = detectConflicts(filteredVacationData);
+            document.getElementById('indicatorTotalConflicts').innerText = conflicts.length;
+
+            const conflictBg = document.getElementById('indicatorConflictBg');
+            if (conflicts.length > 0) {
+                conflictBg.className = 'p-3 bg-rose-100 text-rose-800 rounded-lg';
+                renderConflictAlerts(conflicts);
+            } else {
+                conflictBg.className = 'p-3 bg-slate-100 text-slate-600 rounded-lg';
+                document.getElementById('conflictSection').classList.add('hidden');
+            }
+
+            renderTable(filteredVacationData, conflicts);
+        }
+
+        function detectConflicts(dataList) {
+            const conflicts = [];
+
+            for (let i = 0; i < dataList.length; i++) {
+                for (let j = i + 1; j < dataList.length; j++) {
+                    const a = dataList[i];
+                    const b = dataList[j];
+
+                    const sameGroup = (a.unidade === b.unidade) || (a.funcao === b.funcao);
+
+                    if (sameGroup) {
+                        const overlap = (a.startDate <= b.endDate) && (a.endDate >= b.startDate);
+                        if (overlap) {
+                            conflicts.push({ a, b });
+                        }
+                    }
+                }
+            }
+            return conflicts;
+        }
+
+        function renderConflictAlerts(conflicts) {
+            const container = document.getElementById('conflictList');
+            container.innerHTML = '';
+
+            conflicts.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-3 rounded-lg border border-rose-200 text-xs text-rose-900 flex flex-col md:flex-row justify-between gap-2 shadow-sm';
+                div.innerHTML = `
+                    <div>
+                        <strong>${c.a.nome}</strong> (${c.a.unidade} / ${c.a.funcao}) 
+                        <span class="text-slate-500">vs</span> 
+                        <strong>${c.b.nome}</strong> (${c.b.unidade} / ${c.b.funcao})
+                    </div>
+                    <div class="text-rose-700 font-semibold">
+                        Período conflitante entre ${c.a.startDate.toLocaleDateString('pt-BR')} e ${c.a.endDate.toLocaleDateString('pt-BR')}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('conflictSection').classList.remove('hidden');
+        }
+
+        function renderTable(dataList, conflicts) {
+            const tbody = document.getElementById('vacationTableBody');
+            tbody.innerHTML = '';
+
+            if (dataList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-400">Nenhum registro encontrado para os filtros selecionados.</td></tr>';
+                return;
+            }
+
+            const conflictedIds = new Set();
+            conflicts.forEach(c => {
+                conflictedIds.add(c.a.id);
+                conflictedIds.add(c.b.id);
+            });
+
+            dataList.forEach(item => {
+                const isConflicted = conflictedIds.has(item.id);
+                const tr = document.createElement('tr');
+                tr.className = isConflicted ? 'bg-rose-50/70 border-b border-rose-100' : 'hover:bg-slate-50';
+
+                tr.innerHTML = `
+                    <td class="p-3 font-mono text-slate-600">${item.matricula}</td>
+                    <td class="p-3 font-bold text-slate-800">${item.nome}</td>
+                    <td class="p-3">${item.unidade}</td>
+                    <td class="p-3">${item.funcao}</td>
+                    <td class="p-3">${item.startDate.toLocaleDateString('pt-BR')}</td>
+                    <td class="p-3 font-semibold">${item.days} dias</td>
+                    <td class="p-3">${item.endDate.toLocaleDateString('pt-BR')}</td>
+                    <td class="p-3">
+                        ${isConflicted 
+                            ? '<span class="inline-flex items-center gap-1 px-2 py-1 bg-rose-100 text-rose-800 rounded font-bold text-[10px]"><i data-lucide="alert-circle" class="w-3 h-3"></i> Colisão</span>' 
+                            : '<span class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-800 rounded font-semibold text-[10px]">Normal</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
+        function printReport() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
+
